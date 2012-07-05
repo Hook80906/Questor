@@ -9,6 +9,7 @@
 //-------------------------------------------------------------------------------
 
 using System.Globalization;
+using LavishScriptAPI;
 
 namespace Questor
 {
@@ -278,7 +279,8 @@ namespace Questor
             }
 
             _startTime = DateTime.Now;
-
+            Settings.Instance.LoginUsername = _username;
+            Settings.Instance.LoginCharacter = _character;
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new QuestorfrmMain());
@@ -340,58 +342,74 @@ namespace Questor
                         bool close = false;
                         bool restart = false;
                         bool needhumanintervention = false;
+                        bool sayyes = false;
+                        bool update = false;
 
                         if (!string.IsNullOrEmpty(window.Html))
                         {
                             //errors that are repeatable and unavoidable even after a restart of eve/questor
                             needhumanintervention = window.Html.Contains("reason: Account subscription expired");
 
+                            //update |= window.Html.Contains("The update has been downloaded");
+
                             // Server going down
                             //Logging.Log("[Startup] (1) close is: " + close);
-                            close |= window.Html.Contains("Please make sure your characters are out of harms way");
-                            close |= window.Html.Contains("The socket was closed");
-                            close |= window.Html.Contains("accepting connections");
-                            close |= window.Html.Contains("Could not connect");
-                            close |= window.Html.Contains("The connection to the server was closed");
-                            close |= window.Html.Contains("server was closed");
-                            close |= window.Html.Contains("Unable to connect to the selected server. Please check the address and try again.");
-                            close |= window.Html.Contains("make sure your characters are out of harm");
-                            close |= window.Html.Contains("Connection to server lost");
-                            close |= window.Html.Contains("The socket was closed");
-                            close |= window.Html.Contains("The specified proxy or server node");
-                            close |= window.Html.Contains("Starting up");
-                            close |= window.Html.Contains("Unable to connect to the selected server");
-                            close |= window.Html.Contains("Could not connect to the specified address");
-                            close |= window.Html.Contains("Connection Timeout");
-                            close |= window.Html.Contains("The cluster is not currently accepting connections");
-                            close |= window.Html.Contains("Your character is located within");
-                            close |= window.Html.Contains("The transport has not yet been connected");
-                            close |= window.Html.Contains("The user's connection has been usurped");
-                            close |= window.Html.Contains("The EVE cluster has reached its maximum user limit");
-                            close |= window.Html.Contains("The connection to the server was closed");
-                            close |= window.Html.Contains("client is already connecting to the server");
+                            close |= window.Html.ToLower().Contains("please make sure your characters are out of harms way");
+                            close |= window.Html.ToLower().Contains("the socket was closed");
+                            close |= window.Html.ToLower().Contains("accepting connections");
+                            close |= window.Html.ToLower().Contains("could not connect");
+                            close |= window.Html.ToLower().Contains("the connection to the server was closed");
+                            close |= window.Html.ToLower().Contains("server was closed");
+                            close |= window.Html.ToLower().Contains("make sure your characters are out of harm");
+                            close |= window.Html.ToLower().Contains("connection to server lost");
+                            close |= window.Html.ToLower().Contains("the socket was closed");
+                            close |= window.Html.ToLower().Contains("the specified proxy or server node");
+                            close |= window.Html.ToLower().Contains("starting up");
+                            close |= window.Html.ToLower().Contains("unable to connect to the selected server");
+                            close |= window.Html.ToLower().Contains("could not connect to the specified address");
+                            close |= window.Html.ToLower().Contains("connection timeout");
+                            close |= window.Html.ToLower().Contains("the cluster is not currently accepting connections");
+                            close |= window.Html.ToLower().Contains("your character is located within");
+                            close |= window.Html.ToLower().Contains("the transport has not yet been connected");
+                            close |= window.Html.ToLower().Contains("the user's connection has been usurped");
+                            close |= window.Html.ToLower().Contains("the EVE cluster has reached its maximum user limit");
+                            close |= window.Html.ToLower().Contains("the connection to the server was closed");
+                            close |= window.Html.ToLower().Contains("client is already connecting to the server");
                             //close |= window.Html.Contains("A client update is available and will now be installed");
                             //
                             // eventually it would be nice to hit ok on this one and let it update
                             //
-                            close |= window.Html.Contains("client update is available and will now be installed");
-                            close |= window.Html.Contains("You are on a <b>14 day trial</b>.");
+                            close |= window.Html.ToLower().Contains("client update is available and will now be installed");
+                            close |= window.Html.ToLower().Contains("change your trial account to a paying account");
                             //
                             // these windows require a quit of eve all together
                             //
-                            restart |= window.Html.Contains("The connection was closed");
-                            restart |= window.Html.Contains("Connection to server lost."); //INFORMATION
-                            restart |= window.Html.Contains("Connection to server lost"); //INFORMATION
-                            restart |= window.Html.Contains("Local cache is corrupt");
-                            restart |= window.Html.Contains("Local session information is corrupt");
-                            restart |= window.Html.Contains("The client's local session"); // information is corrupt");
-                            restart |= window.Html.Contains("restart the client prior to logging in");
-
+                            restart |= window.Html.ToLower().Contains("the connection was closed");
+                            restart |= window.Html.ToLower().Contains("connection to server lost."); //INFORMATION
+                            restart |= window.Html.ToLower().Contains("local cache is corrupt");
+                            restart |= window.Html.ToLower().Contains("local session information is corrupt");
+                            restart |= window.Html.ToLower().Contains("The client's local session"); // information is corrupt");
+                            restart |= window.Html.ToLower().Contains("restart the client prior to logging in");
+                            //
+                            // Modal Dialogs the need "yes" pressed
+                            //
+                            //sayyes |= window.Html.Contains("There is a new build available");
                             //Logging.Log("[Startup] (2) close is: " + close);
                             //Logging.Log("[Startup] (1) window.Html is: " + window.Html);
                             _pulsedelay = 60;
                         }
-
+                        if (update)
+                        {
+                            int secRestart = (400 * 3) + Settings.Instance.RandomNumber(3, 18) * 100 + Settings.Instance.RandomNumber(1, 9) * 10;
+                            LavishScript.ExecuteCommand("uplink exec Echo [${Time}] timedcommand " + secRestart + " OSExecute taskkill /IM launcher.exe");
+                        }
+                        if (sayyes)
+                        {
+                            Logging.Log("Startup", "Found a window that needs 'yes' chosen...", Logging.white);
+                            Logging.Log("Startup", "Content of modal window (HTML): [" + (window.Html ?? string.Empty).Replace("\n", "").Replace("\r", "") + "]", Logging.white);
+                            window.AnswerModal("Yes");
+                            continue;
+                        }
                         if (restart)
                         {
                             Logging.Log("Startup", "Restarting eve...", Logging.red);
@@ -413,9 +431,13 @@ namespace Questor
                         {
                             Logging.Log("Startup", "ERROR! - Human Intervention is required in this case: halting all login attempts - ERROR!", Logging.red);
                             Logging.Log("Startup", "window.Name is: " + window.Name, Logging.red);
-                            Logging.Log("Startup", "window.Caption is: " + window.Caption, Logging.red);
-                            Logging.Log("Startup", "window.ID is: " + window.Id, Logging.red);
                             Logging.Log("Startup", "window.Html is: " + window.Html, Logging.red);
+                            Logging.Log("Startup", "window.Caption is: " + window.Caption, Logging.red);
+                            Logging.Log("Startup", "window.Type is: " + window.Type, Logging.red);
+                            Logging.Log("Startup", "window.ID is: " + window.Id, Logging.red);
+                            Logging.Log("Startup", "window.IsDialog is: " + window.IsDialog, Logging.red);
+                            Logging.Log("Startup", "window.IsKillable is: " + window.IsKillable, Logging.red);
+                            Logging.Log("Startup", "window.Viewmode is: " + window.ViewMode, Logging.red);
                             Logging.Log("Startup", "ERROR! - Human Intervention is required in this case: halting all login attempts - ERROR!", Logging.red);
                             _humaninterventionrequired = true;
                             return;
@@ -428,9 +450,14 @@ namespace Questor
                         continue;
                     Logging.Log("Startup", "We've got an unexpected window, auto login halted.", Logging.red);
                     Logging.Log("Startup", "window.Name is: " + window.Name, Logging.red);
-                    Logging.Log("Startup", "window.Caption is: " + window.Caption, Logging.red);
-                    Logging.Log("Startup", "window.ID is: " + window.Id, Logging.red);
                     Logging.Log("Startup", "window.Html is: " + window.Html, Logging.red);
+                    Logging.Log("Startup", "window.Caption is: " + window.Caption, Logging.red);
+                    Logging.Log("Startup", "window.Type is: " + window.Type, Logging.red);
+                    Logging.Log("Startup", "window.ID is: " + window.Id, Logging.red);
+                    Logging.Log("Startup", "window.IsDialog is: " + window.IsDialog, Logging.red);
+                    Logging.Log("Startup", "window.IsKillable is: " + window.IsKillable, Logging.red);
+                    Logging.Log("Startup", "window.Viewmode is: " + window.ViewMode, Logging.red);
+                    Logging.Log("Startup", "We've got an unexpected window, auto login halted.", Logging.red);
                     _done = true;
                     return;
                 }
